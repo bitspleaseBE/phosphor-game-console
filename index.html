@@ -295,11 +295,22 @@ const BOOT_LINES = [
   '',
   'BOOTING WORLD //'
 ];
+const BOOT_LINES_RETURN = name => [
+  'PHOSPHOR//1000 PERSONAL TERMINAL',
+  '',
+  'ROM CHECK ............ OK',
+  'PHOSPHOR TUBE ........ STILL WARM',
+  'VISITOR RECORD ....... FOUND ▓ ' + name,
+  '',
+  'RESUMING WORLD //'
+];
 async function bootSequence(){
   show('boot');
   const el = scenes.boot;
   el.textContent = '';
-  for(const line of BOOT_LINES){
+  const known = localStorage.getItem(LS_NAME);
+  const lines = known ? BOOT_LINES_RETURN(known) : BOOT_LINES;
+  for(const line of lines){
     el.textContent += line + '\n';
     beep(700, .02, .02);
     await wait(line === '' ? 90 : 230);
@@ -383,8 +394,9 @@ async function worldScene(){
   if(!worldAnim) drawWorld(0);
   const known = localStorage.getItem(LS_NAME);
   if(known){
-    await speak(['. . . b z z t . . .', 'the machine remembers you, ' + known + '.',
-                 'the cartridges have been waiting.']);
+    await speak(['you came back, ' + known + '.',
+                 'it was quiet in here without you.',
+                 'listen — the cartridges are humming.']);
     await wait(500);
     menuScene();
   }else{
