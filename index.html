@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
 <title>PHOSPHOR//1000</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -22,12 +22,14 @@
     display:flex; align-items:center; justify-content:center;
     font-family:'VT323', 'Courier New', monospace;
     overflow:hidden;
+    touch-action:manipulation; /* no double-tap zoom delay */
   }
 
   /* ============ CRT SHELL ============ */
   #crt{
     position:relative;
     width:min(96vw, calc(86vh * 4 / 3));
+    width:min(96vw, calc(86dvh * 4 / 3)); /* dvh: shrinks when mobile keyboard opens */
     background:var(--bezel);
     border-radius:2.2vmin;
     padding:1.6vmin 1.6vmin 6vmin; /* chin bezel for physical controls */
@@ -172,6 +174,21 @@
   #off .led{ width:1.4vmin; height:1.4vmin; border-radius:50%; background:#2a1010; box-shadow:inset 0 0 3px #000; }
   #off span{ font-size:clamp(13px,2.4vmin,22px); letter-spacing:.35em; animation:blink 1.6s steps(1) infinite; }
   .cursor::after{ content:'█'; animation:blink .9s steps(1) infinite; }
+  #menuHints span{ text-decoration:underline dotted; cursor:pointer; }
+
+  /* ============ MOBILE / PORTRAIT ============ */
+  @media (orientation:portrait){
+    #crt{
+      width:min(96vw, calc(78vh * 3 / 4));
+      width:min(96vw, calc(78dvh * 3 / 4));
+    }
+    #screen{ aspect-ratio:3/4; } /* taller tube for phones */
+    #cards{ flex-direction:column; flex-wrap:nowrap; overflow-y:auto; gap:2.4vmin; }
+    .card{ width:min(80%, 340px); flex:none; }
+  }
+  @media (pointer:coarse){
+    #ejectBtn{ padding:.35em 1.1em; } /* bigger tap target */
+  }
 </style>
 </head>
 <body>
@@ -184,7 +201,8 @@
       <canvas id="worldCanvas" width="200" height="110"></canvas>
       <div id="dialog"><span class="say cursor"></span></div>
       <form id="nameForm" autocomplete="off">
-        <span>&gt;</span><input id="nameInput" maxlength="12" spellcheck="false">
+        <span>&gt;</span><input id="nameInput" maxlength="12" spellcheck="false"
+          autocapitalize="characters" autocomplete="off" enterkeyhint="go">
       </form>
       <div class="hint" id="worldHint" style="visibility:hidden">ENTER ⏎</div>
     </section>
@@ -193,7 +211,7 @@
       <div id="menuTitle">SELECT CARTRIDGE</div>
       <div id="menuSub"></div>
       <div id="cards"></div>
-      <div class="hint" id="menuHints">◄ ► SELECT &nbsp;&nbsp; ⏎ LAUNCH &nbsp;&nbsp; F2 NEW IDENTITY</div>
+      <div class="hint" id="menuHints"></div>
     </section>
 
     <section id="play" class="scene"></section>
@@ -405,6 +423,7 @@ async function worldScene(){
     nameInput.value = '';
     nameForm.classList.add('show');
     nameInput.focus();
+    setTimeout(() => nameInput.scrollIntoView({ block:'center', behavior:'smooth' }), 350);
   }
 }
 nameForm.addEventListener('submit', async e => {
@@ -412,6 +431,7 @@ nameForm.addEventListener('submit', async e => {
   const name = nameInput.value.trim().toUpperCase().slice(0,12);
   if(!name) return;
   localStorage.setItem(LS_NAME, name);
+  nameInput.blur(); /* dismiss mobile keyboard */
   nameForm.classList.remove('show');
   beep(880,.08,.05); beep(1320,.1,.04);
   await speak([name + ' . . .', 'yes. the tube hums your name.',
@@ -422,9 +442,15 @@ nameForm.addEventListener('submit', async e => {
 
 /* ================= MENU + LIVE THUMBS ================= */
 let selected = 0, thumbsBuilt = false;
+const TOUCH = matchMedia('(pointer:coarse)').matches;
 function menuScene(){
   cancelAnimationFrame(worldAnim); worldAnim = null;
   $('#menuSub').textContent = 'VISITOR: ' + (localStorage.getItem(LS_NAME) || 'UNKNOWN');
+  $('#menuHints').innerHTML =
+    (TOUCH ? 'TAP TO SELECT · TAP AGAIN TO LAUNCH'
+           : '◄ ► SELECT &nbsp; ⏎ LAUNCH') +
+    ' &nbsp;·&nbsp; <span id="newId">NEW IDENTITY' + (TOUCH ? '' : ' [F2]') + '</span>';
+  $('#newId').addEventListener('click', () => { localStorage.removeItem(LS_NAME); thumbsSayGoodbye(); });
   show('menu');
   if(!thumbsBuilt){ buildCards(); thumbsBuilt = true; }
   selectCard(selected);
