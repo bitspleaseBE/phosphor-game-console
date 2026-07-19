@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PHOSPHOR//1000</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ph:   #41ff7a;
+    --ph-hi:#b6ffcf;
+    --ph-md:#1fb653;
+    --ph-lo:#0d5a2a;
+    --ph-bg:#04120a;
+    --bezel:#101311;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  body{
+    background:#000;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'VT323', 'Courier New', monospace;
+    overflow:hidden;
+  }
+
+  /* ============ CRT SHELL ============ */
+  #crt{
+    position:relative;
+    width:min(96vw, calc(92vh * 4 / 3));
+    aspect-ratio:4/3;
+    background:var(--bezel);
+    border-radius:2.2vmin;
+    padding:1.6vmin;
+    box-shadow:0 0 60px rgba(65,255,122,.06), inset 0 0 12px #000;
+  }
+  #screen{
+    position:relative;
+    width:100%; height:100%;
+    background:var(--ph-bg);
+    border-radius:2vmin / 2.6vmin;
+    overflow:hidden;
+    transform:scale(1,0.002);
+    filter:brightness(0);
+    color:var(--ph);
+    text-shadow:0 0 6px rgba(65,255,122,.65), 0 0 1px var(--ph);
+  }
+  #screen.on{ animation:zap .55s cubic-bezier(.2,1.6,.4,1) forwards; }
+  @keyframes zap{
+    0%  { transform:scale(1,.002); filter:brightness(14) saturate(0); }
+    35% { transform:scale(1.02,.015); filter:brightness(10); }
+    60% { transform:scale(.98,1.06);  filter:brightness(2.4); }
+    80% { transform:scale(1.01,.985); filter:brightness(1.15); }
+    100%{ transform:scale(1,1);       filter:brightness(1); }
+  }
+
+  /* overlays */
+  .fx{ position:absolute; inset:0; pointer-events:none; z-index:40; border-radius:inherit; }
+  .scanlines{ background:repeating-linear-gradient(0deg, rgba(0,0,0,.32) 0 1px, transparent 1px 3px); }
+  .grille{ background:repeating-linear-gradient(90deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px); }
+  .vignette{ background:radial-gradient(ellipse at center, transparent 58%, rgba(0,0,0,.55) 100%); }
+  .flicker{ background:rgba(65,255,122,.03); animation:flick 4s steps(1) infinite; }
+  @keyframes flick{
+    0%,100%{opacity:.4} 7%{opacity:.9} 8%{opacity:.2} 32%{opacity:.6}
+    33%{opacity:.25} 61%{opacity:.7} 62%{opacity:.3} 84%{opacity:.85} 85%{opacity:.35}
+  }
+  .rollbar{
+    background:linear-gradient(0deg, transparent 0%, rgba(182,255,207,.045) 50%, transparent 100%);
+    height:22%; width:100%; inset:auto;
+    animation:roll 7.5s linear infinite;
+  }
+  @keyframes roll{ from{ transform:translateY(-30vh);} to{ transform:translateY(110vh);} }
+
+  /* ============ SCENES ============ */
+  .scene{ position:absolute; inset:0; display:none; flex-direction:column; padding:4% 6%; z-index:10; }
+  .scene.active{ display:flex; }
+  #boot{ font-size:clamp(14px, 2.6vmin, 26px); line-height:1.45; white-space:pre-wrap; }
+
+  /* world / dialogue */
+  #world{ align-items:center; justify-content:center; gap:2vmin; text-align:center; }
+  #worldCanvas{
+    width:min(72%, 58vmin); image-rendering:pixelated;
+    filter:drop-shadow(0 0 8px rgba(65,255,122,.35));
+  }
+  #dialog{ min-height:6em; font-size:clamp(16px, 3.4vmin, 34px); line-height:1.4; }
+  #dialog .say{ opacity:.92; }
+  #nameForm{ display:none; justify-content:center; gap:.4em; font-size:clamp(16px, 3.4vmin, 34px); }
+  #nameForm.show{ display:flex; }
+  #nameInput{
+    background:transparent; border:none; outline:none;
+    border-bottom:2px solid var(--ph-md);
+    color:var(--ph); font:inherit; text-shadow:inherit;
+    width:9ch; text-transform:uppercase; text-align:center; caret-color:var(--ph);
+  }
+  .hint{ color:var(--ph-md); font-size:clamp(11px, 1.9vmin, 18px); letter-spacing:.12em; }
+
+  /* menu */
+  #menu{ align-items:center; gap:2.2vmin; }
+  #menuTitle{ font-size:clamp(18px, 4vmin, 42px); letter-spacing:.3em; margin-top:1vmin; }
+  #menuSub{ color:var(--ph-md); font-size:clamp(12px, 2.2vmin, 20px); letter-spacing:.15em; }
+  #cards{ display:flex; gap:4vmin; flex:1; align-items:center; justify-content:center; width:100%; flex-wrap:wrap; }
+  .card{
+    width:clamp(200px, 34%, 380px);
+    border:2px solid var(--ph-lo); border-radius:6px;
+    padding:1.2vmin; cursor:pointer;
+    background:rgba(65,255,122,.03);
+    transition:transform .12s;
+  }
+  .card.sel{
+    border-color:var(--ph);
+    box-shadow:0 0 14px rgba(65,255,122,.35), inset 0 0 12px rgba(65,255,122,.08);
+    transform:scale(1.03);
+  }
+  .thumb{
+    position:relative; width:100%; aspect-ratio:4/3; overflow:hidden;
+    background:#000; border-radius:3px;
+  }
+  .thumb iframe{
+    position:absolute; top:0; left:0; width:800px; height:600px; border:0;
+    transform-origin:top left; pointer-events:none;
+    filter:grayscale(1) sepia(1) hue-rotate(66deg) saturate(4.5) brightness(.9) contrast(1.1);
+  }
+  .thumb canvas, .thumb img{
+    position:absolute; inset:0; width:100%; height:100%;
+    image-rendering:pixelated; object-fit:cover; display:none;
+    filter:grayscale(1) sepia(1) hue-rotate(66deg) saturate(4.5) brightness(.95) contrast(1.1);
+  }
+  .thumb .pixgrid{
+    position:absolute; inset:0; pointer-events:none;
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 1px, transparent 1px 4px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,.25) 0 1px, transparent 1px 4px);
+  }
+  .card h3{ font-size:clamp(15px, 2.9vmin, 30px); letter-spacing:.18em; margin-top:1vmin; text-align:center; }
+  .card p{ color:var(--ph-md); font-size:clamp(11px, 1.9vmin, 18px); text-align:center; letter-spacing:.08em; }
+  .card .go{ display:none; text-align:center; margin-top:.6vmin; font-size:clamp(11px,2vmin,19px); animation:blink 1s steps(1) infinite; }
+  .card.sel .go{ display:block; }
+  @keyframes blink{ 50%{ opacity:0; } }
+  #menuHints{ margin-bottom:.6vmin; }
+
+  /* game player */
+  #play{ padding:0; }
+  #play iframe{ width:100%; height:100%; border:0; background:#000; }
+  #loadingCart{
+    position:absolute; inset:0; z-index:20; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:2vmin;
+    background:var(--ph-bg); font-size:clamp(16px,3.4vmin,34px); letter-spacing:.2em;
+  }
+  #ejectBtn{
+    position:absolute; top:1.4vmin; right:1.8vmin; z-index:45;
+    background:rgba(4,18,10,.85); color:var(--ph); border:1px solid var(--ph-lo);
+    border-radius:4px; padding:.2em .7em; font:inherit;
+    font-size:clamp(11px,2vmin,18px); letter-spacing:.15em; cursor:pointer;
+    text-shadow:0 0 6px rgba(65,255,122,.65); opacity:.55;
+  }
+  #ejectBtn:hover{ opacity:1; box-shadow:0 0 10px rgba(65,255,122,.4); }
+
+  /* power splash */
+  #off{
+    position:absolute; inset:0; z-index:60; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:3vmin; cursor:pointer;
+    color:#1c241e; background:transparent;
+  }
+  #off .led{ width:1.4vmin; height:1.4vmin; border-radius:50%; background:#2a1010; box-shadow:inset 0 0 3px #000; }
+  #off span{ font-size:clamp(13px,2.4vmin,22px); letter-spacing:.35em; animation:blink 1.6s steps(1) infinite; }
+  .cursor::after{ content:'█'; animation:blink .9s steps(1) infinite; }
+</style>
+</head>
+<body>
+
+<div id="crt">
+  <div id="screen">
+    <section id="boot" class="scene"></section>
+
+    <section id="world" class="scene">
+      <canvas id="worldCanvas" width="200" height="110"></canvas>
+      <div id="dialog"><span class="say cursor"></span></div>
+      <form id="nameForm" autocomplete="off">
+        <span>&gt;</span><input id="nameInput" maxlength="12" spellcheck="false">
+      </form>
+      <div class="hint" id="worldHint" style="visibility:hidden">ENTER ⏎</div>
+    </section>
+
+    <section id="menu" class="scene">
+      <div id="menuTitle">SELECT CARTRIDGE</div>
+      <div id="menuSub"></div>
+      <div id="cards"></div>
+      <div class="hint" id="menuHints">◄ ► SELECT &nbsp;&nbsp; ⏎ LAUNCH &nbsp;&nbsp; F2 NEW IDENTITY</div>
+    </section>
+
+    <section id="play" class="scene"></section>
+
+    <div class="fx scanlines"></div>
+    <div class="fx grille"></div>
+    <div class="fx rollbar"></div>
+    <div class="fx vignette"></div>
+    <div class="fx flicker"></div>
+    <button id="ejectBtn" style="display:none">⏏ EJECT</button>
+  </div>
+  <div id="off"><div class="led"></div><span>PRESS POWER</span></div>
+</div>
+
+<script>
+'use strict';
+/* ================= DATA ================= */
+const GAMES = [
+  {
+    id:'wandertrap', title:'WANDERTRAP',
+    desc:'do not get lost. do not get caught.',
+    url:'https://bitspleasebe.github.io/2d-game/',
+    img:null
+  },
+  {
+    id:'bubblepop', title:'BUBBLE POP',
+    desc:'the tower grows. the bubbles burst.',
+    url:'https://bitspleasebe.github.io/tower-game/',
+    img:'https://bitspleasebe.github.io/tower-game/index.png'
+  }
+];
+const LS_NAME = 'phosphor.visitor';
+
+/* ================= HELPERS ================= */
+const $ = s => document.querySelector(s);
+const scenes = { boot:$('#boot'), world:$('#world'), menu:$('#menu'), play:$('#play') };
+function show(name){
+  Object.values(scenes).forEach(s => s.classList.remove('active'));
+  scenes[name].classList.add('active');
+}
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+/* ================= AUDIO ================= */
+let AC = null;
+function audio(){ if(!AC) AC = new (window.AudioContext||window.webkitAudioContext)(); return AC; }
+function beep(freq=440, dur=0.06, vol=0.05, type='square'){
+  try{
+    const ac = audio(), o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+    o.connect(g).connect(ac.destination);
+    o.start(); o.stop(ac.currentTime + dur);
+  }catch(e){}
+}
+function zapSound(){
+  try{
+    const ac = audio();
+    const len = ac.sampleRate * 0.4, buf = ac.createBuffer(1, len, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i] = (Math.random()*2-1) * Math.pow(1-i/len, 2.5);
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const g = ac.createGain(); g.gain.value = 0.12;
+    src.connect(g).connect(ac.destination); src.start();
+    const o = ac.createOscillator(), og = ac.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(1400, ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(60, ac.currentTime + 0.35);
+    og.gain.setValueAtTime(0.1, ac.currentTime);
+    og.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.4);
+    o.connect(og).connect(ac.destination); o.start(); o.stop(ac.currentTime+0.4);
+  }catch(e){}
+}
+
+/* ================= TYPEWRITER ================= */
+let skipTyping = false;
+async function typeText(el, text, cps=28){
+  skipTyping = false;
+  el.textContent = '';
+  for(const ch of text){
+    if(skipTyping){ el.textContent = text; break; }
+    el.textContent += ch;
+    if(ch !== ' ') beep(1100 + Math.random()*300, .012, .012);
+    await wait(1000/cps);
+  }
+}
+document.addEventListener('keydown', e => { if(e.key==='Enter') skipTyping = true; });
+document.addEventListener('pointerdown', () => { skipTyping = true; });
+
+/* ================= BOOT ================= */
+const BOOT_LINES = [
+  'PHOSPHOR//1000 PERSONAL TERMINAL',
+  '(C) 19▓▓ BITSPLEASE SYSTEMS',
+  '',
+  'ROM CHECK ............ OK',
+  'PHOSPHOR TUBE ........ WARM',
+  'MEMORY 64K ........... OK',
+  'CARTRIDGE BUS ........ 2 SLOTS DETECTED',
+  '',
+  'BOOTING WORLD //'
+];
+async function bootSequence(){
+  show('boot');
+  const el = scenes.boot;
+  el.textContent = '';
+  for(const line of BOOT_LINES){
+    el.textContent += line + '\n';
+    beep(700, .02, .02);
+    await wait(line === '' ? 90 : 230);
+  }
+  for(let i=0;i<9;i++){ el.textContent += '▒'; beep(500+i*40,.02,.02); await wait(110); }
+  await wait(420);
+}
+
+/* ================= PIXEL WORLD ================= */
+const wc = $('#worldCanvas'), wg = wc.getContext('2d');
+const PAL = { sky:'#04120a', star:'#41ff7a', starDim:'#0d5a2a', hill:'#0a3d1d',
+              hill2:'#0d5a2a', body:'#1fb653', dark:'#0a3d1d', eye:'#b6ffcf' };
+const STARS = Array.from({length:46}, () => ({
+  x:Math.floor(Math.random()*200), y:Math.floor(Math.random()*60),
+  p:Math.random()*Math.PI*2
+}));
+/* hooded figure sprite, 13 wide */
+const SPRITE = [
+  '.....XXX.....',
+  '...XXXXXXX...',
+  '..XXXXXXXXX..',
+  '..XXXXXXXXX..',
+  '..XX.....XX..',
+  '..X.E...E.X..',
+  '..XX.....XX..',
+  '..XXXXXXXXX..',
+  '.XXXXXXXXXXX.',
+  '.XXXXXXXXXXX.',
+  'XXXXXXXXXXXXX',
+  'XXXXXXXXXXXXX',
+  'XXXXXXXXXXXXX'
+];
+let worldAnim = null;
+function drawWorld(t){
+  const W = wc.width, H = wc.height;
+  wg.fillStyle = PAL.sky; wg.fillRect(0,0,W,H);
+  STARS.forEach(s => {
+    const tw = Math.sin(t/700 + s.p) > 0.2;
+    wg.fillStyle = tw ? PAL.star : PAL.starDim;
+    wg.fillRect(s.x, s.y, 1, 1);
+  });
+  wg.fillStyle = PAL.hill;
+  for(let x=0; x<W; x++){
+    const h = 26 + Math.floor(10*Math.sin(x/17) + 6*Math.sin(x/7+2));
+    wg.fillRect(x, H-h, 1, h);
+  }
+  wg.fillStyle = PAL.hill2;
+  for(let x=0; x<W; x++){
+    const h = 14 + Math.floor(6*Math.sin(x/11+5));
+    wg.fillRect(x, H-h, 1, h);
+  }
+  const sx = Math.floor(W/2 - 6), sy = H - 44 + (Math.sin(t/900)>0.9 ? 1 : 0);
+  const blink = Math.sin(t/450) > -0.92;
+  SPRITE.forEach((row, ry) => {
+    [...row].forEach((c, rx) => {
+      if(c === '.') return;
+      wg.fillStyle = c === 'E' ? (blink ? PAL.eye : PAL.dark) : PAL.body;
+      if(c === 'E' && blink){
+        wg.fillStyle = PAL.eye;
+        wg.fillRect(sx+rx, sy+ry, 1, 1);
+        wg.fillStyle = 'rgba(182,255,207,.25)';
+        wg.fillRect(sx+rx-1, sy+ry, 3, 1); wg.fillRect(sx+rx, sy+ry-1, 1, 3);
+        return;
+      }
+      wg.fillRect(sx+rx, sy+ry, 1, 1);
+    });
+  });
+  worldAnim = requestAnimationFrame(drawWorld);
+}
+
+/* ================= DIALOGUE ================= */
+const say = $('#dialog .say'), nameForm = $('#nameForm'), nameInput = $('#nameInput');
+async function speak(lines, cps){
+  for(const l of lines){
+    await typeText(say, l, cps);
+    await wait(skipTyping ? 250 : 850);
+  }
+}
+async function worldScene(){
+  show('world');
+  if(!worldAnim) drawWorld(0);
+  const known = localStorage.getItem(LS_NAME);
+  if(known){
+    await speak(['. . . b z z t . . .', 'the machine remembers you, ' + known + '.',
+                 'the cartridges have been waiting.']);
+    await wait(500);
+    menuScene();
+  }else{
+    await speak(['. . . b z z t . . .', 'a light. after all this time.',
+                 'someone is at the terminal.', 'WHO ARE YOU?']);
+    nameInput.value = '';
+    nameForm.classList.add('show');
+    nameInput.focus();
+  }
+}
+nameForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = nameInput.value.trim().toUpperCase().slice(0,12);
+  if(!name) return;
+  localStorage.setItem(LS_NAME, name);
+  nameForm.classList.remove('show');
+  beep(880,.08,.05); beep(1320,.1,.04);
+  await speak([name + ' . . .', 'yes. the tube hums your name.',
+               'come. the cartridges have been waiting.']);
+  await wait(400);
+  menuScene();
+});
+
+/* ================= MENU + LIVE THUMBS ================= */
+let selected = 0, thumbsBuilt = false;
+function menuScene(){
+  cancelAnimationFrame(worldAnim); worldAnim = null;
+  $('#menuSub').textContent = 'VISITOR: ' + (localStorage.getItem(LS_NAME) || 'UNKNOWN');
+  show('menu');
+  if(!thumbsBuilt){ buildCards(); thumbsBuilt = true; }
+  selectCard(selected);
+}
+function buildCards(){
+  const wrap = $('#cards');
+  GAMES.forEach((g, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = '<div class="thumb"><div class="pixgrid"></div></div>' +
+      '<h3>' + g.title + '</h3><p>' + g.desc + '</p><div class="go">► INSERT ◄</div>';
+    const thumb = card.querySelector('.thumb');
+    card.addEventListener('click', () => {
+      if(selected === i) launch(g); else { selectCard(i); beep(660,.04,.04); }
+    });
+    card.addEventListener('dblclick', () => launch(g));
+    wrap.appendChild(card);
+    setupThumb(g, thumb);
+  });
+}
+function selectCard(i){
+  selected = i;
+  document.querySelectorAll('.card').forEach((c, j) => c.classList.toggle('sel', j === i));
+}
+function setupThumb(game, thumb){
+  const pixgrid = thumb.querySelector('.pixgrid');
+  /* live iframe (scaled to fit) */
+  const frame = document.createElement('iframe');
+  frame.src = game.url; frame.tabIndex = -1; frame.setAttribute('scrolling','no');
+  frame.loading = 'lazy';
+  thumb.insertBefore(frame, pixgrid);
+  const fit = () => { frame.style.transform = 'scale(' + (thumb.clientWidth/800) + ')'; };
+  fit(); addEventListener('resize', fit);
+  /* pixelation canvas */
+  const cv = document.createElement('canvas');
+  cv.width = 96; cv.height = 72;
+  const cx = cv.getContext('2d', { willReadFrequently:true });
+  thumb.insertBefore(cv, pixgrid);
+  /* static fallback image */
+  let img = null;
+  if(game.img){
+    img = document.createElement('img');
+    img.src = game.img; img.alt = game.title;
+    thumb.insertBefore(img, pixgrid);
+  }
+  let darkCount = 0, dead = false;
+  const timer = setInterval(() => {
+    if(dead || !document.body.contains(thumb)) return clearInterval(timer);
+    try{
+      const doc = frame.contentDocument;
+      const gc = doc && doc.querySelector('canvas');
+      if(!gc || !gc.width) return;
+      cx.imageSmoothingEnabled = true;
+      cx.drawImage(gc, 0, 0, cv.width, cv.height);
+      const px = cx.getImageData(0, 0, cv.width, cv.height).data;
+      let sum = 0;
+      for(let i = 0; i < px.length; i += 40) sum += px[i] + px[i+1] + px[i+2];
+      if(sum / (px.length/40) < 6){
+        if(++darkCount > 8){ dead = true; fallback(); clearInterval(timer); }
+        return;
+      }
+      cv.style.display = 'block';
+      frame.style.visibility = 'hidden';
+    }catch(e){ dead = true; fallback(); clearInterval(timer); }
+  }, 500);
+  function fallback(){
+    cv.style.display = 'none';
+    if(img){ img.style.display = 'block'; frame.style.visibility = 'hidden'; }
+    else   { frame.style.visibility = 'visible'; } /* live scaled view */
+  }
+}
+
+/* ================= LAUNCH / EJECT ================= */
+const ejectBtn = $('#ejectBtn');
+let playFrame = null;
+async function launch(game){
+  beep(440,.09,.05); beep(880,.12,.05);
+  show('play');
+  const load = document.createElement('div');
+  load.id = 'loadingCart';
+  load.innerHTML = 'INSERTING CARTRIDGE<br>' + game.title + '<br><span id="lbar"></span>';
+  scenes.play.appendChild(load);
+  const bar = load.querySelector('#lbar');
+  for(let i=0;i<12;i++){ bar.textContent += '█'; beep(300+i*60,.02,.025); await wait(90); }
+  playFrame = document.createElement('iframe');
+  playFrame.src = game.url;
+  playFrame.allow = 'fullscreen; gamepad; autoplay';
+  scenes.play.appendChild(playFrame);
+  await wait(250);
+  load.remove();
+  playFrame.focus();
+  ejectBtn.style.display = 'block';
+}
+function eject(){
+  beep(880,.06,.05); beep(440,.1,.05);
+  scenes.play.innerHTML = '';
+  playFrame = null;
+  ejectBtn.style.display = 'none';
+  menuScene();
+}
+ejectBtn.addEventListener('click', eject);
+
+/* ================= GLOBAL KEYS ================= */
+document.addEventListener('keydown', e => {
+  if(scenes.menu.classList.contains('active')){
+    if(e.key === 'ArrowRight'){ selectCard((selected+1) % GAMES.length); beep(660,.04,.04); }
+    if(e.key === 'ArrowLeft'){ selectCard((selected-1+GAMES.length) % GAMES.length); beep(660,.04,.04); }
+    if(e.key === 'Enter'){ launch(GAMES[selected]); }
+    if(e.key === 'F2'){
+      localStorage.removeItem(LS_NAME);
+      thumbsSayGoodbye();
+    }
+  }
+});
+function thumbsSayGoodbye(){
+  say.textContent = '';
+  worldScene();
+}
+
+/* ================= POWER ON ================= */
+const off = $('#off'), screen = $('#screen');
+let powered = false;
+async function powerOn(){
+  if(powered) return; powered = true;
+  audio();
+  off.remove();
+  zapSound();
+  screen.classList.add('on');
+  await wait(650);
+  await bootSequence();
+  worldScene();
+}
+off.addEventListener('click', powerOn);
+document.addEventListener('keydown', function once(e){
+  document.removeEventListener('keydown', once);
+  powerOn();
+}, { once:true });
+</script>
+</body>
+</html>
