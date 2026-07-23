@@ -254,6 +254,11 @@ function show(name){
   scenes[name].classList.add('active');
 }
 const wait = ms => new Promise(r => setTimeout(r, ms));
+function gameUrl(url){
+  const name = localStorage.getItem(LS_NAME);
+  if(!name) return url;
+  return url + (url.includes('?') ? '&' : '?') + 'name=' + encodeURIComponent(name);
+}
 
 /* ================= AUDIO ================= */
 let AC = null;
@@ -536,7 +541,7 @@ async function launch(game){
   const bar = load.querySelector('#lbar');
   for(let i=0;i<12;i++){ bar.textContent += '█'; beep(300+i*60,.02,.025); await wait(90); }
   playFrame = document.createElement('iframe');
-  playFrame.src = game.url;
+  playFrame.src = gameUrl(game.url);
   playFrame.allow = 'fullscreen; gamepad; autoplay';
   scenes.play.appendChild(playFrame);
   await wait(250);
