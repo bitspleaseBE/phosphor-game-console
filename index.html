@@ -159,6 +159,25 @@
   }
   #ejectBtn:hover{ color:var(--ph); text-shadow:0 0 8px rgba(65,255,122,.7); }
   #ejectBtn:active{ transform:translateY(2px); box-shadow:0 0 0 #000, inset 0 1px 0 rgba(255,255,255,.08); }
+
+  /* ============ PLAYING: edge-to-edge, CRT effects off ============ */
+  body.playing{ background:#000; }
+  body.playing #crt{
+    width:100vw; height:100vh; height:100dvh;
+    padding:0; border-radius:0; box-shadow:none; background:#000;
+  }
+  body.playing #screen{
+    aspect-ratio:auto; height:100%; border-radius:0;
+    text-shadow:none; filter:none !important; transform:none !important;
+  }
+  body.playing .fx{ display:none; }          /* kill scanlines / grille / flicker / vignette */
+  body.playing #brand{ display:none; }
+  body.playing #ejectBtn{
+    position:fixed; top:env(safe-area-inset-top, 8px); right:env(safe-area-inset-right, 8px);
+    bottom:auto; z-index:60; opacity:.4; padding:.25em .8em;
+    background:rgba(4,12,8,.6); border-color:var(--ph-lo);
+  }
+  body.playing #ejectBtn:hover{ opacity:1; }
   #brand{
     position:absolute; bottom:1.5vmin; left:2.4vmin;
     color:#2a2f2b; font-size:clamp(11px,2vmin,18px); letter-spacing:.4em;
@@ -539,6 +558,7 @@ const ejectBtn = $('#ejectBtn');
 let playFrame = null;
 async function launch(game){
   beep(440,.09,.05); beep(880,.12,.05);
+  document.body.classList.add('playing');
   show('play');
   const load = document.createElement('div');
   load.id = 'loadingCart';
@@ -557,6 +577,7 @@ async function launch(game){
 }
 function eject(){
   beep(880,.06,.05); beep(440,.1,.05);
+  document.body.classList.remove('playing');
   scenes.play.innerHTML = '';
   playFrame = null;
   ejectBtn.style.display = 'none';
