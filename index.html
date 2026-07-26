@@ -3,8 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
-<title>PHOSPHOR//1000</title>
+<title>PHOSPHOR//1000 — three small games</title>
+<meta name="description" content="A phosphor-green CRT console holding three browser games: Wandertrap, Bubble Pop and Bastion Bomber. Switch it on and pick a cartridge.">
+<meta name="theme-color" content="#04120a">
+<meta name="color-scheme" content="dark">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="PHOSPHOR//1000">
+<meta property="og:title" content="PHOSPHOR//1000">
+<meta property="og:description" content="A phosphor-green CRT console holding three browser games. Switch it on and pick a cartridge.">
+<meta property="og:url" content="https://games.bitsplease.be/">
+<meta property="og:image" content="https://games.bitsplease.be/preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The PHOSPHOR//1000 boot screen in green phosphor text on a black CRT.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23101311'/%3E%3Crect x='4' y='7' width='24' height='17' rx='3' fill='%2304120a'/%3E%3Cpath d='M9 12h4v8H9zM15 12h3v3h-3zM19 12h4v8h-4z' fill='%2341ff7a'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -14,6 +29,8 @@
     --ph-lo:#0d5a2a;
     --ph-bg:#04120a;
     --bezel:#101311;
+    --standby:#1a8f43;   /* dim, but legible on black: ~5:1 */
+    --silk:  #7c867e;    /* silkscreened chassis text: ~4.5:1 on the bezel */
   }
   *{ box-sizing:border-box; margin:0; padding:0; }
   html,body{ height:100%; }
@@ -24,15 +41,17 @@
     overflow:hidden;
     touch-action:manipulation; /* no double-tap zoom delay */
   }
+  :focus-visible{ outline:2px solid var(--ph); outline-offset:2px; }
 
   /* ============ CRT SHELL ============ */
   #crt{
+    --chin:6vmin;
     position:relative;
-    width:min(96vw, calc(86vh * 4 / 3));
-    width:min(96vw, calc(86dvh * 4 / 3)); /* dvh: shrinks when mobile keyboard opens */
+    width:min(96vw, calc((88vh - var(--chin)) * 4 / 3));
+    width:min(96vw, calc((88dvh - var(--chin)) * 4 / 3)); /* dvh: shrinks when mobile keyboard opens */
     background:var(--bezel);
     border-radius:2.2vmin;
-    padding:1.6vmin 1.6vmin 6vmin; /* chin bezel for physical controls */
+    padding:1.6vmin 1.6vmin var(--chin); /* chin bezel for physical controls */
     box-shadow:0 0 60px rgba(65,255,122,.06), inset 0 0 12px #000;
   }
   #screen{
@@ -75,7 +94,7 @@
   /* ============ SCENES ============ */
   .scene{ position:absolute; inset:0; display:none; flex-direction:column; padding:4% 6%; z-index:10; }
   .scene.active{ display:flex; }
-  #boot{ font-size:clamp(14px, 2.6vmin, 26px); line-height:1.45; white-space:pre-wrap; }
+  #boot{ font-size:clamp(0.85rem, 2.6vmin, 1.6rem); line-height:1.45; white-space:pre-wrap; }
 
   /* world / dialogue */
   #world{ align-items:center; justify-content:center; gap:2vmin; text-align:center; }
@@ -83,9 +102,9 @@
     width:min(72%, 58vmin); image-rendering:pixelated;
     filter:drop-shadow(0 0 8px rgba(65,255,122,.35));
   }
-  #dialog{ min-height:6em; font-size:clamp(16px, 3.4vmin, 34px); line-height:1.4; }
+  #dialog{ min-height:4.5em; font-size:clamp(1rem, 3.4vmin, 2.1rem); line-height:1.4; }
   #dialog .say{ opacity:.92; }
-  #nameForm{ display:none; justify-content:center; gap:.4em; font-size:clamp(16px, 3.4vmin, 34px); }
+  #nameForm{ display:none; justify-content:center; gap:.4em; font-size:clamp(1rem, 3.4vmin, 2.1rem); }
   #nameForm.show{ display:flex; }
   #nameInput{
     background:transparent; border:none; outline:none;
@@ -93,29 +112,59 @@
     color:var(--ph); font:inherit; text-shadow:inherit;
     width:9ch; text-transform:uppercase; text-align:center; caret-color:var(--ph);
   }
-  .hint{ color:var(--ph-md); font-size:clamp(11px, 1.9vmin, 18px); letter-spacing:.12em; }
+  #nameInput:focus-visible{ outline:none; border-bottom-color:var(--ph); }
+  .hint{ color:var(--ph-md); font-size:clamp(0.78rem, 1.9vmin, 1.15rem); letter-spacing:.12em; }
+  #worldActions{ display:flex; flex-direction:column; align-items:center; gap:.6vmin; }
+  #worldActions[hidden]{ display:none; }
+  .linky{
+    background:none; border:0; font:inherit; color:var(--ph-md); cursor:pointer;
+    font-size:clamp(0.78rem, 1.9vmin, 1.15rem); letter-spacing:.12em;
+    text-decoration:underline dotted; text-underline-offset:.25em; padding:.3em .5em;
+  }
+  .linky:hover, .linky:focus-visible{ color:var(--ph); }
+  .sr{
+    position:absolute; width:1px; height:1px; overflow:hidden;
+    clip-path:inset(50%); white-space:nowrap;
+  }
 
   /* menu */
-  #menu{ align-items:center; gap:2.2vmin; }
-  #menuTitle{ font-size:clamp(18px, 4vmin, 42px); letter-spacing:.3em; margin-top:1vmin; }
-  #menuSub{ color:var(--ph-md); font-size:clamp(12px, 2.2vmin, 20px); letter-spacing:.15em; }
-  #cards{ display:flex; gap:4vmin; flex:1; align-items:center; justify-content:center; width:100%; flex-wrap:wrap; }
+  #menu{ gap:1.4vmin; }
+  #menuTitle{ font-size:clamp(1.1rem, 4vmin, 2.6rem); letter-spacing:.3em; margin-top:1vmin; text-align:center; flex:none; font-weight:normal; }
+  #menuSub{ color:var(--ph-md); font-size:clamp(0.8rem, 2.2vmin, 1.25rem); letter-spacing:.15em; text-align:center; flex:none; }
+  #cards{
+    flex:1 1 auto; min-height:0;                 /* so the list can shrink instead of overflowing the tube */
+    overflow-y:auto; overflow-x:hidden;
+    display:grid; gap:2vmin;
+    grid-template-columns:repeat(auto-fit, minmax(min(190px, 100%), 1fr));
+    /* Centring scrollable content puts its top above scrollTop:0, where it can
+       never be reached. `safe center` centres only while everything fits and
+       falls back to start once it overflows; the plain `start` above covers
+       browsers that don't know the keyword. */
+    align-content:start;
+    align-content:safe center;
+    padding:.4vmin; scrollbar-width:thin; scrollbar-color:var(--ph-lo) transparent;
+    scroll-padding:1vmin 0;
+  }
+  #cards::-webkit-scrollbar{ width:6px; }
+  #cards::-webkit-scrollbar-thumb{ background:var(--ph-lo); border-radius:3px; }
   .card{
-    width:clamp(200px, 34%, 380px);
+    display:grid; grid-template-columns:1fr; gap:.6vmin;
     border:2px solid var(--ph-lo); border-radius:6px;
-    padding:1.2vmin; cursor:pointer;
+    padding:1.2vmin; cursor:pointer; text-align:center;
     background:rgba(65,255,122,.03);
+    font:inherit; color:inherit; text-shadow:inherit;
     transition:transform .12s;
   }
   .card.sel{
     border-color:var(--ph);
     box-shadow:0 0 14px rgba(65,255,122,.35), inset 0 0 12px rgba(65,255,122,.08);
-    transform:scale(1.03);
+    transform:scale(1.02);
   }
   .thumb{
-    position:relative; width:100%; aspect-ratio:4/3; overflow:hidden;
+    display:block; position:relative; width:100%; aspect-ratio:4/3; overflow:hidden;
     background:#000; border-radius:3px;
   }
+  .meta{ display:flex; flex-direction:column; gap:.15em; min-width:0; }
   .thumb iframe{
     position:absolute; top:0; left:0; width:800px; height:600px; border:0;
     transform-origin:top left; pointer-events:none;
@@ -127,17 +176,36 @@
     filter:grayscale(1) sepia(1) hue-rotate(66deg) saturate(4.5) brightness(.95) contrast(1.1);
   }
   .thumb .pixgrid{
-    position:absolute; inset:0; pointer-events:none;
+    display:block; position:absolute; inset:0; pointer-events:none;
     background:
       repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 1px, transparent 1px 4px),
       repeating-linear-gradient(90deg, rgba(0,0,0,.25) 0 1px, transparent 1px 4px);
   }
-  .card h3{ font-size:clamp(15px, 2.9vmin, 30px); letter-spacing:.18em; margin-top:1vmin; text-align:center; }
-  .card p{ color:var(--ph-md); font-size:clamp(11px, 1.9vmin, 18px); text-align:center; letter-spacing:.08em; }
-  .card .go{ display:none; text-align:center; margin-top:.6vmin; font-size:clamp(11px,2vmin,19px); animation:blink 1s steps(1) infinite; }
-  .card.sel .go{ display:block; }
+  .card .title{ font-size:clamp(0.95rem, 2.9vmin, 1.85rem); letter-spacing:.18em; line-height:1.2; }
+  .card .desc{ color:var(--ph-md); font-size:clamp(0.78rem, 1.9vmin, 1.15rem); letter-spacing:.08em; line-height:1.25; }
+  .card .spec{ color:var(--ph-md); font-size:clamp(0.74rem, 1.7vmin, 1rem); letter-spacing:.14em; }
+  .card .spec:empty{ display:none; }
+  .card .go{ visibility:hidden; font-size:clamp(0.78rem, 2vmin, 1.2rem); animation:blink 1s steps(1) infinite; }
+  .card.sel .go{ visibility:visible; }
   @keyframes blink{ 50%{ opacity:0; } }
-  #menuHints{ margin-bottom:.6vmin; }
+  #menuFoot{ flex:none; display:flex; flex-direction:column; align-items:center; gap:.2vmin; }
+  #more{ color:var(--ph-md); visibility:hidden; font-size:clamp(0.78rem,1.8vmin,1.05rem); }
+  #more.show{ visibility:visible; animation:nudge 1.6s ease-in-out infinite; }
+  @keyframes nudge{ 50%{ transform:translateY(.25em); } }
+  #menuHints{ text-align:center; }
+
+  /* compact cartridges when the tube is short or narrow: thumb beside the text,
+     so all three still fit instead of being cropped away */
+  @media (max-width:520px), (max-height:560px){
+    #cards{ grid-template-columns:1fr; gap:1.4vmin; }
+    .card{ grid-template-columns:36% 1fr; gap:1.6vmin; align-items:center; text-align:left; }
+  }
+  @media (max-height:430px){
+    #menu{ gap:.8vmin; }
+    #menuTitle{ margin-top:0; }
+    #cards{ gap:1vmin; }
+    .card{ grid-template-columns:28% 1fr; padding:.8vmin; }
+  }
 
   /* game player */
   #play{ padding:0; }
@@ -145,20 +213,31 @@
   #loadingCart{
     position:absolute; inset:0; z-index:20; display:flex; flex-direction:column;
     align-items:center; justify-content:center; gap:2vmin;
-    background:var(--ph-bg); font-size:clamp(16px,3.4vmin,34px); letter-spacing:.2em;
+    background:var(--ph-bg); font-size:clamp(1rem,3.4vmin,2.1rem); letter-spacing:.2em;
   }
-  /* physical eject button on the chin bezel, outside the screen */
-  #ejectBtn{
-    position:absolute; bottom:1.1vmin; right:2.2vmin; z-index:45;
+
+  /* ============ CHIN: physical controls, outside the screen ============ */
+  #chin{
+    position:absolute; left:0; right:0; bottom:0; height:var(--chin);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 2.2vmin; gap:1vmin; z-index:45;
+  }
+  #brand{
+    color:var(--silk); font-size:clamp(0.7rem,2vmin,1.15rem); letter-spacing:.4em;
+    text-shadow:none; user-select:none; font-weight:normal; white-space:nowrap;
+  }
+  .chin-btns{ display:flex; align-items:center; gap:1vmin; }
+  #chin button{
     background:linear-gradient(#232724, #16191a);
     color:var(--ph-md); border:1px solid #000; border-radius:5px;
     padding:.15em .8em; font:inherit;
-    font-size:clamp(11px,2.2vmin,19px); letter-spacing:.2em; cursor:pointer;
+    font-size:clamp(0.7rem,2.2vmin,1.2rem); letter-spacing:.2em; cursor:pointer;
     box-shadow:0 2px 0 #000, inset 0 1px 0 rgba(255,255,255,.08);
-    text-shadow:0 0 5px rgba(65,255,122,.4);
+    text-shadow:0 0 5px rgba(65,255,122,.4); white-space:nowrap;
   }
-  #ejectBtn:hover{ color:var(--ph); text-shadow:0 0 8px rgba(65,255,122,.7); }
-  #ejectBtn:active{ transform:translateY(2px); box-shadow:0 0 0 #000, inset 0 1px 0 rgba(255,255,255,.08); }
+  #chin button:hover{ color:var(--ph); text-shadow:0 0 8px rgba(65,255,122,.7); }
+  #chin button:active{ transform:translateY(2px); box-shadow:0 0 0 #000, inset 0 1px 0 rgba(255,255,255,.08); }
+  #chin button[hidden]{ display:none; }
 
   /* ============ PLAYING: edge-to-edge, CRT effects off ============ */
   body.playing{ background:#000; }
@@ -171,42 +250,54 @@
     text-shadow:none; filter:none !important; transform:none !important;
   }
   body.playing .fx{ display:none; }          /* kill scanlines / grille / flicker / vignette */
-  body.playing #brand{ display:none; }
-  body.playing #ejectBtn{
-    position:fixed; top:env(safe-area-inset-top, 8px); right:env(safe-area-inset-right, 8px);
-    bottom:auto; z-index:60; opacity:.4; padding:.25em .8em;
-    background:rgba(4,12,8,.6); border-color:var(--ph-lo);
+  body.playing #chin{
+    position:fixed; inset:auto; height:auto; padding:0;
+    top:calc(env(safe-area-inset-top, 0px) + 8px);
+    right:calc(env(safe-area-inset-right, 0px) + 8px);
+    left:auto; bottom:auto; width:auto; z-index:60;
   }
-  body.playing #ejectBtn:hover{ opacity:1; }
-  #brand{
-    position:absolute; bottom:1.5vmin; left:2.4vmin;
-    color:#2a2f2b; font-size:clamp(11px,2vmin,18px); letter-spacing:.4em;
-    text-shadow:none; user-select:none;
+  body.playing #brand{ display:none; }
+  body.playing #chin button{
+    background:rgba(4,12,8,.82); border-color:var(--ph-md); color:var(--ph);
   }
 
   /* power splash */
   #off{
-    position:absolute; inset:0; z-index:60; display:flex; flex-direction:column;
+    /* stops short of the chin, so the sound button is reachable before the
+       console makes its first noise */
+    position:absolute; top:0; left:0; right:0; bottom:var(--chin);
+    z-index:60; display:flex; flex-direction:column;
     align-items:center; justify-content:center; gap:3vmin; cursor:pointer;
-    color:#1c241e; background:transparent;
+    color:var(--standby); background:transparent; border:0; font:inherit;
   }
-  #off .led{ width:1.4vmin; height:1.4vmin; border-radius:50%; background:#2a1010; box-shadow:inset 0 0 3px #000; }
-  #off span{ font-size:clamp(13px,2.4vmin,22px); letter-spacing:.35em; animation:blink 1.6s steps(1) infinite; }
+  #off .led{
+    width:1.4vmin; height:1.4vmin; min-width:7px; min-height:7px; border-radius:50%;
+    background:#7a1f14; box-shadow:0 0 6px rgba(255,90,60,.35), inset 0 0 3px #000;
+  }
+  #off .label{ font-size:clamp(0.8rem,2.4vmin,1.4rem); letter-spacing:.35em; animation:pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{ opacity:1 } 50%{ opacity:.55 } }
   .cursor::after{ content:'█'; animation:blink .9s steps(1) infinite; }
-  #menuHints span{ text-decoration:underline dotted; cursor:pointer; }
 
   /* ============ MOBILE / PORTRAIT ============ */
   @media (orientation:portrait){
     #crt{
-      width:min(96vw, calc(78vh * 3 / 4));
-      width:min(96vw, calc(78dvh * 3 / 4));
+      width:min(96vw, calc((84vh - var(--chin)) * 3 / 4));
+      width:min(96vw, calc((84dvh - var(--chin)) * 3 / 4));
     }
     #screen{ aspect-ratio:3/4; } /* taller tube for phones */
-    #cards{ flex-direction:column; flex-wrap:nowrap; overflow-y:auto; gap:2.4vmin; }
-    .card{ width:min(80%, 340px); flex:none; }
   }
   @media (pointer:coarse){
-    #ejectBtn{ padding:.35em 1.1em; } /* bigger tap target */
+    #crt{ --chin:52px; }
+    #chin button{ min-height:44px; padding:.35em 1em; } /* real tap targets */
+  }
+
+  /* ============ REDUCED MOTION ============ */
+  @media (prefers-reduced-motion:reduce){
+    #screen.on{ animation:wake .3s linear forwards; }
+    @keyframes wake{ from{ opacity:0; transform:none; filter:none; } to{ opacity:1; transform:none; filter:none; } }
+    .flicker, .rollbar{ display:none; }
+    .card .go, #off .label, .cursor::after, #more.show{ animation:none; }
+    .card{ transition:none; }
   }
 </style>
 </head>
@@ -214,23 +305,31 @@
 
 <div id="crt">
   <div id="screen">
-    <section id="boot" class="scene"></section>
+    <section id="boot" class="scene" aria-hidden="true"></section>
 
     <section id="world" class="scene">
-      <canvas id="worldCanvas" width="200" height="110"></canvas>
-      <div id="dialog"><span class="say cursor"></span></div>
+      <canvas id="worldCanvas" width="200" height="110" role="img"
+        aria-label="A hooded figure standing on a hillside under a starfield, drawn in green pixels"></canvas>
+      <div id="dialog"><span class="say cursor" aria-hidden="true"></span></div>
       <form id="nameForm" autocomplete="off">
-        <span>&gt;</span><input id="nameInput" maxlength="12" spellcheck="false"
+        <label for="nameInput" class="sr">Your name, up to 12 characters</label>
+        <span aria-hidden="true">&gt;</span><input id="nameInput" maxlength="12" spellcheck="false"
           autocapitalize="characters" autocomplete="off" enterkeyhint="go">
       </form>
-      <div class="hint" id="worldHint" style="visibility:hidden">ENTER ⏎</div>
+      <div id="worldActions" hidden>
+        <div class="hint" id="worldHint">ENTER &#9166;</div>
+        <button type="button" class="linky" id="noNameBtn">or just play &rarr;</button>
+      </div>
     </section>
 
-    <section id="menu" class="scene">
-      <div id="menuTitle">SELECT CARTRIDGE</div>
+    <section id="menu" class="scene" aria-labelledby="menuTitle">
+      <h2 id="menuTitle">SELECT CARTRIDGE</h2>
       <div id="menuSub"></div>
-      <div id="cards"></div>
-      <div class="hint" id="menuHints"></div>
+      <div id="cards" aria-label="Cartridges"></div>
+      <div id="menuFoot">
+        <div id="more" aria-hidden="true">&#9660; MORE BELOW</div>
+        <div class="hint" id="menuHints"></div>
+      </div>
     </section>
 
     <section id="play" class="scene"></section>
@@ -241,54 +340,97 @@
     <div class="fx vignette"></div>
     <div class="fx flicker"></div>
   </div>
-  <div id="brand">PHOSPHOR//1000</div>
-  <button id="ejectBtn" style="display:none">⏏ EJECT</button>
-  <div id="off"><div class="led"></div><span>PRESS POWER</span></div>
+
+  <div id="chin">
+    <h1 id="brand">PHOSPHOR//1000</h1>
+    <div class="chin-btns">
+      <button id="muteBtn" type="button">&#9834; ON</button>
+      <button id="skipBtn" type="button" hidden>SKIP &#9654;</button>
+      <button id="ejectBtn" type="button" hidden>&#9167; EJECT</button>
+    </div>
+  </div>
+
+  <button id="off" type="button" aria-label="Switch the console on">
+    <span class="led" aria-hidden="true"></span><span class="label">PRESS POWER</span>
+  </button>
 </div>
+
+<p id="live" class="sr" aria-live="polite"></p>
+
+<noscript>
+  <div style="position:fixed;inset:0;background:#04120a;color:#41ff7a;padding:8vmin;z-index:99;
+              font-family:'VT323',monospace;font-size:1.3rem;line-height:1.6;overflow:auto">
+    <h2 style="letter-spacing:.2em;font-weight:normal">PHOSPHOR//1000</h2>
+    <p style="color:#1fb653">The console needs JavaScript. The cartridges do not — play them directly:</p>
+    <ul style="margin:1em 0 0 1.2em">
+      <li><a href="https://bitspleasebe.github.io/2d-game/" style="color:#41ff7a">Wandertrap</a>
+        — do not get lost. do not get caught.</li>
+      <li><a href="https://bitspleasebe.github.io/tower-game/" style="color:#41ff7a">Bubble Pop</a>
+        — the tower grows. the bubbles burst.</li>
+      <li><a href="https://bitspleasebe.github.io/airplane-game/" style="color:#41ff7a">Bastion Bomber</a>
+        — drop your payload. level the fortress.</li>
+    </ul>
+  </div>
+</noscript>
 
 <script>
 'use strict';
 /* ================= DATA ================= */
+/* `spec` prints under the tagline, e.g. '1 PLAYER · ARROWS · 3 MIN'.
+   Left blank on purpose — fill in the real controls per game. */
 const GAMES = [
   {
     id:'wandertrap', title:'WANDERTRAP',
     desc:'do not get lost. do not get caught.',
+    spec:'',
     url:'https://bitspleasebe.github.io/2d-game/',
     img:null
   },
   {
     id:'bubblepop', title:'BUBBLE POP',
     desc:'the tower grows. the bubbles burst.',
+    spec:'',
     url:'https://bitspleasebe.github.io/tower-game/',
     img:'https://bitspleasebe.github.io/tower-game/index.png'
   },
   {
     id:'bastionbomber', title:'BASTION BOMBER',
     desc:'drop your payload. level the fortress.',
+    spec:'',
     url:'https://bitspleasebe.github.io/airplane-game/',
     img:'https://bitspleasebe.github.io/airplane-game/index.png'
   }
 ];
 const LS_NAME = 'phosphor.visitor';
+const LS_SOUND = 'phosphor.sound';
 
 /* ================= HELPERS ================= */
 const $ = s => document.querySelector(s);
+/* Storage can throw outright (Safari "block all cookies", locked-down profiles).
+   Losing the visitor's name is fine; losing the site is not. */
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
 const scenes = { boot:$('#boot'), world:$('#world'), menu:$('#menu'), play:$('#play') };
 function show(name){
   Object.values(scenes).forEach(s => s.classList.remove('active'));
   scenes[name].classList.add('active');
 }
-const wait = ms => new Promise(r => setTimeout(r, ms));
+const announce = msg => { $('#live').textContent = msg; };
 function gameUrl(url){
-  const name = localStorage.getItem(LS_NAME);
+  const name = store.get(LS_NAME);
   if(!name) return url;
   return url + (url.includes('?') ? '&' : '?') + 'name=' + encodeURIComponent(name);
 }
 
 /* ================= AUDIO ================= */
-let AC = null;
+let AC = null, soundOn = store.get(LS_SOUND) !== 'off';
+const muteBtn = $('#muteBtn');
 function audio(){ if(!AC) AC = new (window.AudioContext||window.webkitAudioContext)(); return AC; }
 function beep(freq=440, dur=0.06, vol=0.05, type='square'){
+  if(!soundOn) return;
   try{
     const ac = audio(), o = ac.createOscillator(), g = ac.createGain();
     o.type = type; o.frequency.value = freq;
@@ -299,6 +441,7 @@ function beep(freq=440, dur=0.06, vol=0.05, type='square'){
   }catch(e){}
 }
 function zapSound(){
+  if(!soundOn) return;
   try{
     const ac = audio();
     const len = ac.sampleRate * 0.4, buf = ac.createBuffer(1, len, ac.sampleRate);
@@ -315,31 +458,60 @@ function zapSound(){
     o.connect(og).connect(ac.destination); o.start(); o.stop(ac.currentTime+0.4);
   }catch(e){}
 }
+function paintMute(){
+  muteBtn.innerHTML = soundOn ? '&#9834; ON' : '&#9834; OFF';
+  muteBtn.setAttribute('aria-label', soundOn ? 'Sound on. Turn sound off' : 'Sound off. Turn sound on');
+}
+muteBtn.addEventListener('click', () => {
+  soundOn = !soundOn;
+  store.set(LS_SOUND, soundOn ? 'on' : 'off');
+  paintMute();
+  if(soundOn) beep(880,.06,.05);
+});
+paintMute();
+
+/* ================= PACING (all of it skippable) ================= */
+let skipAll = false;
+const waiters = new Set();
+function pace(ms){
+  if(skipAll) return Promise.resolve();
+  return new Promise(res => {
+    const cancel = () => { clearTimeout(t); waiters.delete(cancel); res(); };
+    const t = setTimeout(cancel, ms);
+    waiters.add(cancel);
+  });
+}
+function skipIntro(){
+  if(skipAll) return;
+  skipAll = true;
+  waiters.forEach(fn => fn());
+  $('#skipBtn').hidden = true;
+}
+$('#skipBtn').addEventListener('click', skipIntro);
 
 /* ================= TYPEWRITER ================= */
-let skipTyping = false;
 async function typeText(el, text, cps=28){
-  skipTyping = false;
+  announce(text);                       /* screen readers get the whole line, once */
   el.textContent = '';
+  if(skipAll){ el.textContent = text; return; }
   for(const ch of text){
-    if(skipTyping){ el.textContent = text; break; }
+    if(skipAll){ el.textContent = text; break; }
     el.textContent += ch;
     if(ch !== ' ') beep(1100 + Math.random()*300, .012, .012);
-    await wait(1000/cps);
+    await pace(1000/cps);
   }
 }
-document.addEventListener('keydown', e => { if(e.key==='Enter') skipTyping = true; });
-document.addEventListener('pointerdown', () => { skipTyping = true; });
 
 /* ================= BOOT ================= */
-const BOOT_LINES = [
+const slots = () => GAMES.length + (GAMES.length === 1 ? ' SLOT' : ' SLOTS') + ' DETECTED';
+const BOOT_LINES = () => [
   'PHOSPHOR//1000 PERSONAL TERMINAL',
   '(C) 19▓▓ BITSPLEASE SYSTEMS',
   '',
   'ROM CHECK ............ OK',
   'PHOSPHOR TUBE ........ WARM',
   'MEMORY 64K ........... OK',
-  'CARTRIDGE BUS ........ 2 SLOTS DETECTED',
+  'CARTRIDGE BUS ........ ' + slots(),
   '',
   'BOOTING WORLD //'
 ];
@@ -356,15 +528,18 @@ async function bootSequence(){
   show('boot');
   const el = scenes.boot;
   el.textContent = '';
-  const known = localStorage.getItem(LS_NAME);
-  const lines = known ? BOOT_LINES_RETURN(known) : BOOT_LINES;
+  const known = store.get(LS_NAME);
+  announce(known ? 'Booting. Welcome back, ' + known : 'PHOSPHOR 1000 booting');
+  const lines = known ? BOOT_LINES_RETURN(known) : BOOT_LINES();
+  /* a warm tube boots faster: returning visitors don't re-watch the whole POST */
+  const step = known ? 95 : 230, blocks = known ? 5 : 9;
   for(const line of lines){
     el.textContent += line + '\n';
     beep(700, .02, .02);
-    await wait(line === '' ? 90 : 230);
+    await pace(line === '' ? 60 : step);
   }
-  for(let i=0;i<9;i++){ el.textContent += '▒'; beep(500+i*40,.02,.02); await wait(110); }
-  await wait(420);
+  for(let i=0;i<blocks;i++){ el.textContent += '▒'; beep(500+i*40,.02,.02); await pace(known ? 60 : 110); }
+  await pace(known ? 180 : 420);
 }
 
 /* ================= PIXEL WORLD ================= */
@@ -431,86 +606,155 @@ function drawWorld(t){
 
 /* ================= DIALOGUE ================= */
 const say = $('#dialog .say'), nameForm = $('#nameForm'), nameInput = $('#nameInput');
+const worldActions = $('#worldActions');
 async function speak(lines, cps){
   for(const l of lines){
     await typeText(say, l, cps);
-    await wait(skipTyping ? 250 : 850);
+    await pace(skipAll ? 0 : 850);
   }
+}
+function askName(){
+  nameInput.value = '';
+  nameForm.classList.add('show');
+  worldActions.hidden = false;
+  nameInput.focus();
+  setTimeout(() => nameInput.scrollIntoView({ block:'center', behavior:'smooth' }), 350);
 }
 async function worldScene(){
   show('world');
   if(!worldAnim) drawWorld(0);
-  const known = localStorage.getItem(LS_NAME);
+  const known = store.get(LS_NAME);
   if(known){
-    await speak(['you came back, ' + known + '.',
-                 'it was quiet in here without you.',
-                 'listen — the cartridges are humming.']);
-    await wait(500);
+    /* a returning visitor came back for the cartridges, not the ceremony */
+    await speak(['you came back, ' + known + '. the cartridges are humming.']);
+    await pace(400);
     menuScene();
   }else{
     await speak(['. . . b z z t . . .', 'a light. after all this time.',
                  'someone is at the terminal.', 'WHO ARE YOU?']);
-    nameInput.value = '';
-    nameForm.classList.add('show');
-    nameInput.focus();
-    setTimeout(() => nameInput.scrollIntoView({ block:'center', behavior:'smooth' }), 350);
+    askName();
   }
+}
+async function promptNameOnly(){
+  show('world');
+  if(!worldAnim) drawWorld(0);
+  skipAll = false;
+  await speak(['and who are you now?']);
+  askName();
 }
 nameForm.addEventListener('submit', async e => {
   e.preventDefault();
   const name = nameInput.value.trim().toUpperCase().slice(0,12);
-  if(!name) return;
-  localStorage.setItem(LS_NAME, name);
+  if(!name){
+    beep(220,.12,.04);
+    await typeText(say, 'i didn’t catch that. type a name, or just play.');
+    nameInput.focus();
+    return;
+  }
+  store.set(LS_NAME, name);
   nameInput.blur(); /* dismiss mobile keyboard */
   nameForm.classList.remove('show');
+  worldActions.hidden = true;
   beep(880,.08,.05); beep(1320,.1,.04);
   await speak([name + ' . . .', 'yes. the tube hums your name.',
                'come. the cartridges have been waiting.']);
-  await wait(400);
+  await pace(400);
+  menuScene();
+});
+$('#noNameBtn').addEventListener('click', () => {
+  nameInput.blur();
+  nameForm.classList.remove('show');
+  worldActions.hidden = true;
+  skipIntro();
   menuScene();
 });
 
 /* ================= MENU + LIVE THUMBS ================= */
 let selected = 0, thumbsBuilt = false;
 const TOUCH = matchMedia('(pointer:coarse)').matches;
+const thumbs = [];
 function menuScene(){
   cancelAnimationFrame(worldAnim); worldAnim = null;
-  $('#menuSub').textContent = 'VISITOR: ' + (localStorage.getItem(LS_NAME) || 'UNKNOWN');
-  $('#menuHints').innerHTML =
-    (TOUCH ? 'TAP TO SELECT · TAP AGAIN TO LAUNCH'
-           : '◄ ► SELECT &nbsp; ⏎ LAUNCH') +
-    ' &nbsp;·&nbsp; <span id="newId">NEW IDENTITY' + (TOUCH ? '' : ' [F2]') + '</span>';
-  $('#newId').addEventListener('click', () => { localStorage.removeItem(LS_NAME); thumbsSayGoodbye(); });
+  $('#skipBtn').hidden = true;
+  $('#menuSub').textContent = 'VISITOR: ' + (store.get(LS_NAME) || 'UNKNOWN');
+  paintHints();
   show('menu');
   if(!thumbsBuilt){ buildCards(); thumbsBuilt = true; }
-  selectCard(selected);
+  selectCard(selected, { focus:false });
+  requestAnimationFrame(paintMore);
+  announce('Cartridge menu. ' + GAMES.length + ' games. Use the arrow keys to choose, Enter to launch.');
 }
+let wipeArmed = false;
+function paintHints(){
+  const nav = TOUCH ? 'TAP A CARTRIDGE TO PLAY' : '◄ ► SELECT   ⏎ LAUNCH';
+  $('#menuHints').innerHTML = nav + ' &nbsp;·&nbsp; <button type="button" class="linky" id="newId">' +
+    (wipeArmed ? 'FORGET ME? PRESS AGAIN' : 'NEW IDENTITY' + (TOUCH ? '' : ' [F2]')) + '</button>';
+  $('#newId').addEventListener('click', newIdentity);
+}
+function newIdentity(){
+  if(!store.get(LS_NAME)){ promptNameOnly(); return; }
+  if(!wipeArmed){                     /* destructive: ask once, in character */
+    wipeArmed = true; paintHints(); $('#newId').focus();
+    beep(330,.06,.04);
+    setTimeout(() => { if(wipeArmed){ wipeArmed = false; paintHints(); } }, 5000);
+    return;
+  }
+  wipeArmed = false;
+  store.del(LS_NAME);
+  paintHints();
+  say.textContent = '';
+  promptNameOnly();                   /* straight to the prompt: they've seen the intro */
+}
+function paintMore(){
+  const box = $('#cards');
+  $('#more').classList.toggle('show', box.scrollHeight > box.clientHeight + 4);
+}
+addEventListener('resize', () => { if(scenes.menu.classList.contains('active')) paintMore(); });
+
 function buildCards(){
   const wrap = $('#cards');
   GAMES.forEach((g, i) => {
-    const card = document.createElement('div');
+    const card = document.createElement('button');
+    card.type = 'button';
     card.className = 'card';
-    card.innerHTML = '<div class="thumb"><div class="pixgrid"></div></div>' +
-      '<h3>' + g.title + '</h3><p>' + g.desc + '</p><div class="go">► INSERT ◄</div>';
-    const thumb = card.querySelector('.thumb');
-    card.addEventListener('click', () => {
-      if(selected === i) launch(g); else { selectCard(i); beep(660,.04,.04); }
-    });
-    card.addEventListener('dblclick', () => launch(g));
+    card.tabIndex = i === selected ? 0 : -1;
+    card.innerHTML =
+      '<span class="thumb"><span class="pixgrid"></span></span>' +
+      '<span class="meta"><span class="title">' + g.title + '</span>' +
+      '<span class="desc">' + g.desc + '</span>' +
+      '<span class="spec">' + g.spec + '</span>' +
+      '<span class="go" aria-hidden="true">► INSERT ◄</span></span>';
+    card.setAttribute('aria-label', g.title + '. ' + g.desc + (g.spec ? ' ' + g.spec : '') + ' Launch.');
+    card.addEventListener('click', () => launch(g));
+    card.addEventListener('focus', () => selectCard(i, { focus:false }));
     wrap.appendChild(card);
-    setupThumb(g, thumb);
+    thumbs.push(setupThumb(g, card.querySelector('.thumb')));
   });
+  wrap.addEventListener('scroll', paintMore, { passive:true });
 }
-function selectCard(i){
+function selectCard(i, opts){
   selected = i;
-  document.querySelectorAll('.card').forEach((c, j) => c.classList.toggle('sel', j === i));
+  const cards = document.querySelectorAll('.card');
+  cards.forEach((c, j) => {
+    c.classList.toggle('sel', j === i);
+    c.tabIndex = j === i ? 0 : -1;
+  });
+  const card = cards[i];
+  if(card){
+    if(!opts || opts.focus !== false) card.focus();
+    card.scrollIntoView({ block:'nearest' });
+  }
+  /* only the cartridge you're looking at needs to be running */
+  thumbs.forEach((t, j) => t && t.setLive(j === i));
+  paintMore();
 }
 function setupThumb(game, thumb){
   const pixgrid = thumb.querySelector('.pixgrid');
   /* live iframe (scaled to fit) */
   const frame = document.createElement('iframe');
   frame.src = game.url; frame.tabIndex = -1; frame.setAttribute('scrolling','no');
-  frame.loading = 'lazy';
+  frame.loading = 'lazy'; frame.title = game.title + ' preview';
+  frame.setAttribute('aria-hidden','true');
   thumb.insertBefore(frame, pixgrid);
   const fit = () => { frame.style.transform = 'scale(' + (thumb.clientWidth/800) + ')'; };
   fit(); addEventListener('resize', fit);
@@ -523,103 +767,148 @@ function setupThumb(game, thumb){
   let img = null;
   if(game.img){
     img = document.createElement('img');
-    img.src = game.img; img.alt = game.title;
+    img.src = game.img; img.alt = '';
     thumb.insertBefore(img, pixgrid);
   }
-  let darkCount = 0, dead = false;
-  const timer = setInterval(() => {
-    if(dead || !document.body.contains(thumb)) return clearInterval(timer);
-    try{
-      const doc = frame.contentDocument;
-      const gc = doc && doc.querySelector('canvas');
-      if(!gc || !gc.width) return;
-      cx.imageSmoothingEnabled = true;
-      cx.drawImage(gc, 0, 0, cv.width, cv.height);
-      const px = cx.getImageData(0, 0, cv.width, cv.height).data;
-      let sum = 0;
-      for(let i = 0; i < px.length; i += 40) sum += px[i] + px[i+1] + px[i+2];
-      if(sum / (px.length/40) < 6){
-        if(++darkCount > 8){ dead = true; fallback(); clearInterval(timer); }
-        return;
-      }
-      cv.style.display = 'block';
-      frame.style.visibility = 'hidden';
-    }catch(e){ dead = true; fallback(); clearInterval(timer); }
-  }, 500);
+  let darkCount = 0, dead = false, captured = false, live = false;
+  function sample(){
+    if(dead) return;
+    /* Cross-origin frames return null here rather than throwing, so this has to
+       be tested explicitly — otherwise the fallback below can never fire. */
+    let doc = null;
+    try{ doc = frame.contentDocument; }catch(e){ doc = null; }
+    if(!doc){ dead = true; fallback(); return; }
+    const gc = doc.querySelector('canvas');
+    if(!gc || !gc.width) return;
+    cx.imageSmoothingEnabled = true;
+    cx.drawImage(gc, 0, 0, cv.width, cv.height);
+    const px = cx.getImageData(0, 0, cv.width, cv.height).data;
+    let sum = 0;
+    for(let i = 0; i < px.length; i += 40) sum += px[i] + px[i+1] + px[i+2];
+    if(sum / (px.length/40) < 6){
+      if(++darkCount > 8){ dead = true; fallback(); }
+      return;
+    }
+    captured = true;
+    cv.style.display = 'block';
+    frame.style.visibility = 'hidden';
+  }
   function fallback(){
     cv.style.display = 'none';
     if(img){ img.style.display = 'block'; frame.style.visibility = 'hidden'; }
     else   { frame.style.visibility = 'visible'; } /* live scaled view */
+    setLive(live);
   }
+  /* Rendering inside a display:none subtree is suspended, so a cartridge whose
+     preview is already covered — by a still or a captured frame — can be parked
+     instead of running a whole game behind a picture of itself. */
+  function setLive(on){
+    live = on;
+    if(dead && img){ frame.style.display = 'none'; return; } /* the still says it all */
+    frame.style.display = (on || !captured) ? '' : 'none';
+  }
+  return { sample, setLive, isLive: () => live, isResolved: () => dead || captured };
 }
+/* One sampler for all cartridges, only while the menu is on screen: every thumb
+   gets polled until it resolves, then only the selected one keeps updating. */
+setInterval(() => {
+  if(!scenes.menu.classList.contains('active')) return;
+  thumbs.forEach(t => { if(t && (!t.isResolved() || t.isLive())) t.sample(); });
+}, 500);
 
 /* ================= LAUNCH / EJECT ================= */
 const ejectBtn = $('#ejectBtn');
 let playFrame = null;
 async function launch(game){
+  if(playFrame) return;
   beep(440,.09,.05); beep(880,.12,.05);
   document.body.classList.add('playing');
   show('play');
+  announce('Loading ' + game.title);
   const load = document.createElement('div');
   load.id = 'loadingCart';
   load.innerHTML = 'INSERTING CARTRIDGE<br>' + game.title + '<br><span id="lbar"></span>';
   scenes.play.appendChild(load);
-  const bar = load.querySelector('#lbar');
-  for(let i=0;i<12;i++){ bar.textContent += '█'; beep(300+i*60,.02,.025); await wait(90); }
+  /* start the real load immediately; the bar plays over it */
   playFrame = document.createElement('iframe');
   playFrame.src = gameUrl(game.url);
+  playFrame.title = game.title;
   playFrame.allow = 'fullscreen; gamepad; autoplay';
   scenes.play.appendChild(playFrame);
-  await wait(250);
+  ejectBtn.hidden = false;
+  const bar = load.querySelector('#lbar');
+  for(let i=0;i<8;i++){ bar.textContent += '█'; beep(300+i*70,.02,.025); await pace(55); }
   load.remove();
   playFrame.focus();
-  ejectBtn.style.display = 'block';
+  announce(game.title + ' is running. Press the eject button to return to the menu.');
 }
 function eject(){
   beep(880,.06,.05); beep(440,.1,.05);
   document.body.classList.remove('playing');
   scenes.play.innerHTML = '';
   playFrame = null;
-  ejectBtn.style.display = 'none';
+  ejectBtn.hidden = true;
   menuScene();
+  const card = document.querySelectorAll('.card')[selected];
+  if(card) card.focus();
 }
 ejectBtn.addEventListener('click', eject);
+/* Focus lives inside a cross-origin game frame, so the parent never sees its
+   keys. Escape only helps when focus is still here; a game can also ask to be
+   ejected by posting a message home. */
+addEventListener('message', e => {
+  if(playFrame && e.data && (e.data === 'eject' || e.data.type === 'eject')) eject();
+});
 
 /* ================= GLOBAL KEYS ================= */
 document.addEventListener('keydown', e => {
+  if(document.body.classList.contains('playing')){
+    if(e.key === 'Escape'){ e.preventDefault(); eject(); }
+    return;
+  }
   if(scenes.menu.classList.contains('active')){
-    if(e.key === 'ArrowRight'){ selectCard((selected+1) % GAMES.length); beep(660,.04,.04); }
-    if(e.key === 'ArrowLeft'){ selectCard((selected-1+GAMES.length) % GAMES.length); beep(660,.04,.04); }
-    if(e.key === 'Enter'){ launch(GAMES[selected]); }
-    if(e.key === 'F2'){
-      localStorage.removeItem(LS_NAME);
-      thumbsSayGoodbye();
+    const n = GAMES.length;
+    if(e.key === 'ArrowRight' || e.key === 'ArrowDown'){
+      e.preventDefault(); selectCard((selected+1) % n); beep(660,.04,.04);
     }
+    if(e.key === 'ArrowLeft' || e.key === 'ArrowUp'){
+      e.preventDefault(); selectCard((selected-1+n) % n); beep(660,.04,.04);
+    }
+    if(e.key === 'Enter' && !e.target.closest('button')) launch(GAMES[selected]);
+    if(e.key === 'F2'){ e.preventDefault(); newIdentity(); }
   }
 });
-function thumbsSayGoodbye(){
-  say.textContent = '';
-  worldScene();
-}
+/* any key or tap fast-forwards the whole intro, not one line at a time */
+document.addEventListener('keydown', e => {
+  if(e.key === 'Tab' || e.altKey || e.ctrlKey || e.metaKey) return;
+  if(document.activeElement === nameInput) return;
+  if(scenes.boot.classList.contains('active') || scenes.world.classList.contains('active')) skipIntro();
+});
+document.addEventListener('pointerdown', e => {
+  if(e.target.closest('#nameForm, #chin, #worldActions')) return;
+  if(scenes.boot.classList.contains('active') || scenes.world.classList.contains('active')) skipIntro();
+});
 
 /* ================= POWER ON ================= */
 const off = $('#off'), screen = $('#screen');
 let powered = false;
 async function powerOn(){
   if(powered) return; powered = true;
-  audio();
+  if(soundOn) audio();
   off.remove();
   zapSound();
   screen.classList.add('on');
-  await wait(650);
+  $('#skipBtn').hidden = false;
+  await pace(650);
   await bootSequence();
   worldScene();
 }
 off.addEventListener('click', powerOn);
 document.addEventListener('keydown', function once(e){
+  if(e.key === 'Tab' || e.altKey || e.ctrlKey || e.metaKey) return;
   document.removeEventListener('keydown', once);
   powerOn();
-}, { once:true });
+});
 </script>
 </body>
 </html>
