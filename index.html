@@ -24,13 +24,12 @@
 <style>
   :root{
     --ph:   #41ff7a;
-    --ph-hi:#b6ffcf;
     --ph-md:#1fb653;
     --ph-lo:#0d5a2a;
     --ph-bg:#04120a;
     --bezel:#101311;
-    --standby:#1a8f43;   /* dim, but legible on black: ~5:1 */
-    --silk:  #7c867e;    /* silkscreened chassis text: ~4.5:1 on the bezel */
+    --standby:#1fb653;   /* standby glow: 7.9:1 on black, clears AAA */
+    --silk:  #9ea69f;    /* silkscreened chassis text: 7.1:1 on the bezel */
   }
   *{ box-sizing:border-box; margin:0; padding:0; }
   html,body{ height:100%; }
@@ -102,7 +101,7 @@
     width:min(72%, 58vmin); image-rendering:pixelated;
     filter:drop-shadow(0 0 8px rgba(65,255,122,.35));
   }
-  #dialog{ min-height:4.5em; font-size:clamp(1rem, 3.4vmin, 2.1rem); line-height:1.4; }
+  #dialog{ min-height:2.8em; font-size:clamp(1rem, 3.4vmin, 2.1rem); line-height:1.4; }
   #dialog .say{ opacity:.92; }
   #nameForm{ display:none; justify-content:center; gap:.4em; font-size:clamp(1rem, 3.4vmin, 2.1rem); }
   #nameForm.show{ display:flex; }
@@ -166,25 +165,26 @@
   }
   .meta{ display:flex; flex-direction:column; gap:.15em; min-width:0; }
   .thumb iframe{
-    position:absolute; top:0; left:0; width:800px; height:600px; border:0;
+    position:absolute; top:0; left:0; border:0;
     transform-origin:top left; pointer-events:none;
-    filter:grayscale(1) sepia(1) hue-rotate(66deg) saturate(4.5) brightness(.9) contrast(1.1);
+    filter:grayscale(1) sepia(1) hue-rotate(66deg) saturate(4.5) brightness(1.05) contrast(1.25);
   }
   .thumb canvas, .thumb img{
     position:absolute; inset:0; width:100%; height:100%;
     image-rendering:pixelated; object-fit:cover; display:none;
-    filter:grayscale(1) sepia(1) hue-rotate(66deg) saturate(4.5) brightness(.95) contrast(1.1);
+    filter:grayscale(1) sepia(1) hue-rotate(66deg) saturate(4.5) brightness(1.05) contrast(1.25);
   }
   .thumb .pixgrid{
     display:block; position:absolute; inset:0; pointer-events:none;
     background:
-      repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 1px, transparent 1px 4px),
-      repeating-linear-gradient(90deg, rgba(0,0,0,.25) 0 1px, transparent 1px 4px);
+      repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 1px, transparent 1px 5px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,.16) 0 1px, transparent 1px 5px);
   }
-  .card .title{ font-size:clamp(0.95rem, 2.9vmin, 1.85rem); letter-spacing:.18em; line-height:1.2; }
+  .card .title{
+    font-size:clamp(0.95rem, 2.9vmin, 1.85rem); letter-spacing:.18em; line-height:1.2;
+    text-wrap:balance; min-height:2.4em; display:flex; align-items:center; justify-content:center;
+  }
   .card .desc{ color:var(--ph-md); font-size:clamp(0.78rem, 1.9vmin, 1.15rem); letter-spacing:.08em; line-height:1.25; }
-  .card .spec{ color:var(--ph-md); font-size:clamp(0.74rem, 1.7vmin, 1rem); letter-spacing:.14em; }
-  .card .spec:empty{ display:none; }
   .card .go{ visibility:hidden; font-size:clamp(0.78rem, 2vmin, 1.2rem); animation:blink 1s steps(1) infinite; }
   .card.sel .go{ visibility:visible; }
   @keyframes blink{ 50%{ opacity:0; } }
@@ -192,13 +192,14 @@
   #more{ color:var(--ph-md); visibility:hidden; font-size:clamp(0.78rem,1.8vmin,1.05rem); }
   #more.show{ visibility:visible; animation:nudge 1.6s ease-in-out infinite; }
   @keyframes nudge{ 50%{ transform:translateY(.25em); } }
-  #menuHints{ text-align:center; }
+  #menuHints{ display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:.2em 1.4em; }
 
   /* compact cartridges when the tube is short or narrow: thumb beside the text,
      so all three still fit instead of being cropped away */
   @media (max-width:520px), (max-height:560px){
     #cards{ grid-template-columns:1fr; gap:1.4vmin; }
     .card{ grid-template-columns:36% 1fr; gap:1.6vmin; align-items:center; text-align:left; }
+    .card .title{ min-height:0; display:block; }
   }
   @media (max-height:430px){
     #menu{ gap:.8vmin; }
@@ -229,7 +230,7 @@
   .chin-btns{ display:flex; align-items:center; gap:1vmin; }
   #chin button{
     background:linear-gradient(#232724, #16191a);
-    color:var(--ph-md); border:1px solid #000; border-radius:5px;
+    color:var(--ph); border:1px solid #000; border-radius:5px;
     padding:.15em .8em; font:inherit;
     font-size:clamp(0.7rem,2.2vmin,1.2rem); letter-spacing:.2em; cursor:pointer;
     box-shadow:0 2px 0 #000, inset 0 1px 0 rgba(255,255,255,.08);
@@ -289,6 +290,7 @@
   @media (pointer:coarse){
     #crt{ --chin:52px; }
     #chin button{ min-height:44px; padding:.35em 1em; } /* real tap targets */
+    .linky{ min-height:44px; padding:.6em .8em; }
   }
 
   /* ============ REDUCED MOTION ============ */
@@ -317,8 +319,7 @@
           autocapitalize="characters" autocomplete="off" enterkeyhint="go">
       </form>
       <div id="worldActions" hidden>
-        <div class="hint" id="worldHint">ENTER &#9166;</div>
-        <button type="button" class="linky" id="noNameBtn">or just play &rarr;</button>
+        <button type="button" class="linky" id="backBtn">back to the cartridges</button>
       </div>
     </section>
 
@@ -345,7 +346,6 @@
     <h1 id="brand">PHOSPHOR//1000</h1>
     <div class="chin-btns">
       <button id="muteBtn" type="button">&#9834; ON</button>
-      <button id="skipBtn" type="button" hidden>SKIP &#9654;</button>
       <button id="ejectBtn" type="button" hidden>&#9167; EJECT</button>
     </div>
   </div>
@@ -376,27 +376,24 @@
 <script>
 'use strict';
 /* ================= DATA ================= */
-/* `spec` prints under the tagline, e.g. '1 PLAYER · ARROWS · 3 MIN'.
-   Left blank on purpose — fill in the real controls per game. */
 const GAMES = [
   {
     id:'wandertrap', title:'WANDERTRAP',
-    desc:'do not get lost. do not get caught.',
-    spec:'',
+    desc:'Find the way out before it finds you.',
     url:'https://bitspleasebe.github.io/2d-game/',
+    /* No still yet, so the preview is the running game. Drop an index.png next to
+       the game and set it here — the other two cartridges use theirs. */
     img:null
   },
   {
     id:'bubblepop', title:'BUBBLE POP',
-    desc:'the tower grows. the bubbles burst.',
-    spec:'',
+    desc:'Pop them faster than the tower climbs.',
     url:'https://bitspleasebe.github.io/tower-game/',
     img:'https://bitspleasebe.github.io/tower-game/index.png'
   },
   {
     id:'bastionbomber', title:'BASTION BOMBER',
-    desc:'drop your payload. level the fortress.',
-    spec:'',
+    desc:'Everything down there has to go.',
     url:'https://bitspleasebe.github.io/airplane-game/',
     img:'https://bitspleasebe.github.io/airplane-game/index.png'
   }
@@ -485,9 +482,7 @@ function skipIntro(){
   if(skipAll) return;
   skipAll = true;
   waiters.forEach(fn => fn());
-  $('#skipBtn').hidden = true;
 }
-$('#skipBtn').addEventListener('click', skipIntro);
 
 /* ================= TYPEWRITER ================= */
 async function typeText(el, text, cps=28){
@@ -506,40 +501,32 @@ async function typeText(el, text, cps=28){
 const slots = () => GAMES.length + (GAMES.length === 1 ? ' SLOT' : ' SLOTS') + ' DETECTED';
 const BOOT_LINES = () => [
   'PHOSPHOR//1000 PERSONAL TERMINAL',
-  '(C) 19▓▓ BITSPLEASE SYSTEMS',
-  '',
-  'ROM CHECK ............ OK',
   'PHOSPHOR TUBE ........ WARM',
-  'MEMORY 64K ........... OK',
   'CARTRIDGE BUS ........ ' + slots(),
-  '',
-  'BOOTING WORLD //'
+  'READY //'
 ];
 const BOOT_LINES_RETURN = name => [
   'PHOSPHOR//1000 PERSONAL TERMINAL',
-  '',
-  'ROM CHECK ............ OK',
   'PHOSPHOR TUBE ........ STILL WARM',
-  'VISITOR RECORD ....... FOUND ▓ ' + name,
-  '',
-  'RESUMING WORLD //'
+  'VISITOR RECORD ....... ' + name,
+  'READY //'
 ];
 async function bootSequence(){
   show('boot');
   const el = scenes.boot;
   el.textContent = '';
   const known = store.get(LS_NAME);
-  announce(known ? 'Booting. Welcome back, ' + known : 'PHOSPHOR 1000 booting');
+  announce(known ? 'Welcome back, ' + known : 'PHOSPHOR 1000 booting');
   const lines = known ? BOOT_LINES_RETURN(known) : BOOT_LINES();
   /* a warm tube boots faster: returning visitors don't re-watch the whole POST */
-  const step = known ? 95 : 230, blocks = known ? 5 : 9;
+  const step = known ? 90 : 190, blocks = known ? 4 : 6;
   for(const line of lines){
     el.textContent += line + '\n';
     beep(700, .02, .02);
-    await pace(line === '' ? 60 : step);
+    await pace(line === '' ? 50 : step);
   }
-  for(let i=0;i<blocks;i++){ el.textContent += '▒'; beep(500+i*40,.02,.02); await pace(known ? 60 : 110); }
-  await pace(known ? 180 : 420);
+  for(let i=0;i<blocks;i++){ el.textContent += '▒'; beep(500+i*50,.02,.02); await pace(known ? 55 : 95); }
+  await pace(known ? 140 : 240);
 }
 
 /* ================= PIXEL WORLD ================= */
@@ -620,26 +607,15 @@ function askName(){
   nameInput.focus();
   setTimeout(() => nameInput.scrollIntoView({ block:'center', behavior:'smooth' }), 350);
 }
-async function worldScene(){
-  show('world');
-  if(!worldAnim) drawWorld(0);
-  const known = store.get(LS_NAME);
-  if(known){
-    /* a returning visitor came back for the cartridges, not the ceremony */
-    await speak(['you came back, ' + known + '. the cartridges are humming.']);
-    await pace(400);
-    menuScene();
-  }else{
-    await speak(['. . . b z z t . . .', 'a light. after all this time.',
-                 'someone is at the terminal.', 'WHO ARE YOU?']);
-    askName();
-  }
-}
-async function promptNameOnly(){
+/* The name is a flourish, not a toll gate: visitors reach the cartridges
+   first, and can sign in from the menu if they feel like it. */
+async function nameScene(){
   show('world');
   if(!worldAnim) drawWorld(0);
   skipAll = false;
-  await speak(['and who are you now?']);
+  const known = store.get(LS_NAME);
+  await speak(known ? ['Back again, ' + known + '. What should I call you now?']
+                    : ['Someone\u2019s at the terminal.', 'What should I call you?']);
   askName();
 }
 nameForm.addEventListener('submit', async e => {
@@ -647,7 +623,7 @@ nameForm.addEventListener('submit', async e => {
   const name = nameInput.value.trim().toUpperCase().slice(0,12);
   if(!name){
     beep(220,.12,.04);
-    await typeText(say, 'i didn’t catch that. type a name, or just play.');
+    await typeText(say, 'I didn\u2019t catch that.');
     nameInput.focus();
     return;
   }
@@ -656,16 +632,14 @@ nameForm.addEventListener('submit', async e => {
   nameForm.classList.remove('show');
   worldActions.hidden = true;
   beep(880,.08,.05); beep(1320,.1,.04);
-  await speak([name + ' . . .', 'yes. the tube hums your name.',
-               'come. the cartridges have been waiting.']);
-  await pace(400);
+  await speak(['Noted, ' + name + '.']);
+  await pace(260);
   menuScene();
 });
-$('#noNameBtn').addEventListener('click', () => {
+$('#backBtn').addEventListener('click', () => {
   nameInput.blur();
   nameForm.classList.remove('show');
   worldActions.hidden = true;
-  skipIntro();
   menuScene();
 });
 
@@ -675,36 +649,23 @@ const TOUCH = matchMedia('(pointer:coarse)').matches;
 const thumbs = [];
 function menuScene(){
   cancelAnimationFrame(worldAnim); worldAnim = null;
-  $('#skipBtn').hidden = true;
-  $('#menuSub').textContent = 'VISITOR: ' + (store.get(LS_NAME) || 'UNKNOWN');
+  const who = store.get(LS_NAME);
+  $('#menuSub').textContent = who ? 'VISITOR: ' + who : '';
   paintHints();
   show('menu');
   if(!thumbsBuilt){ buildCards(); thumbsBuilt = true; }
   selectCard(selected, { focus:false });
   requestAnimationFrame(paintMore);
-  announce('Cartridge menu. ' + GAMES.length + ' games. Use the arrow keys to choose, Enter to launch.');
+  announce('Cartridge menu. ' + GAMES.length + ' games. Arrow keys to choose, Enter to launch.');
 }
-let wipeArmed = false;
 function paintHints(){
+  const who = store.get(LS_NAME);
   const nav = TOUCH ? 'TAP A CARTRIDGE TO PLAY' : '◄ ► SELECT   ⏎ LAUNCH';
-  $('#menuHints').innerHTML = nav + ' &nbsp;·&nbsp; <button type="button" class="linky" id="newId">' +
-    (wipeArmed ? 'FORGET ME? PRESS AGAIN' : 'NEW IDENTITY' + (TOUCH ? '' : ' [F2]')) + '</button>';
-  $('#newId').addEventListener('click', newIdentity);
+  $('#menuHints').innerHTML = '<span>' + nav + '</span><button type="button" class="linky" id="newId">' +
+    (who ? 'NOT ' + who + '?' : 'ADD YOUR NAME') + '</button>';
+  $('#newId').addEventListener('click', openNameScene);
 }
-function newIdentity(){
-  if(!store.get(LS_NAME)){ promptNameOnly(); return; }
-  if(!wipeArmed){                     /* destructive: ask once, in character */
-    wipeArmed = true; paintHints(); $('#newId').focus();
-    beep(330,.06,.04);
-    setTimeout(() => { if(wipeArmed){ wipeArmed = false; paintHints(); } }, 5000);
-    return;
-  }
-  wipeArmed = false;
-  store.del(LS_NAME);
-  paintHints();
-  say.textContent = '';
-  promptNameOnly();                   /* straight to the prompt: they've seen the intro */
-}
+function openNameScene(){ say.textContent = ''; nameScene(); }
 function paintMore(){
   const box = $('#cards');
   $('#more').classList.toggle('show', box.scrollHeight > box.clientHeight + 4);
@@ -722,9 +683,8 @@ function buildCards(){
       '<span class="thumb"><span class="pixgrid"></span></span>' +
       '<span class="meta"><span class="title">' + g.title + '</span>' +
       '<span class="desc">' + g.desc + '</span>' +
-      '<span class="spec">' + g.spec + '</span>' +
       '<span class="go" aria-hidden="true">► INSERT ◄</span></span>';
-    card.setAttribute('aria-label', g.title + '. ' + g.desc + (g.spec ? ' ' + g.spec : '') + ' Launch.');
+    card.setAttribute('aria-label', g.title + '. ' + g.desc + ' Launch.');
     card.addEventListener('click', () => launch(g));
     card.addEventListener('focus', () => selectCard(i, { focus:false }));
     wrap.appendChild(card);
@@ -751,16 +711,29 @@ function selectCard(i, opts){
 function setupThumb(game, thumb){
   const pixgrid = thumb.querySelector('.pixgrid');
   /* live iframe (scaled to fit) */
+  const pw = 800, ph = 600;   /* 4:3, matching the thumb */
   const frame = document.createElement('iframe');
   frame.src = game.url; frame.tabIndex = -1; frame.setAttribute('scrolling','no');
   frame.loading = 'lazy'; frame.title = game.title + ' preview';
   frame.setAttribute('aria-hidden','true');
+  frame.style.width = pw + 'px'; frame.style.height = ph + 'px';
   thumb.insertBefore(frame, pixgrid);
-  const fit = () => { frame.style.transform = 'scale(' + (thumb.clientWidth/800) + ')'; };
-  fit(); addEventListener('resize', fit);
+  /* Fit the whole preview viewport into the thumb, centred. Driven by a
+     ResizeObserver: the thumb's size changes as the grid settles, on rotation and
+     when the scrollbar appears, and a scale computed once goes stale — which is
+     what cropped the preview to its top-left corner. */
+  const fit = () => {
+    const w = thumb.clientWidth, h = thumb.clientHeight;
+    if(!w || !h) return;
+    const k = Math.min(w / pw, h / ph);
+    frame.style.transform = 'translate(' + ((w - pw * k) / 2) + 'px,' +
+      ((h - ph * k) / 2) + 'px) scale(' + k + ')';
+  };
+  new ResizeObserver(fit).observe(thumb);
+  fit();
   /* pixelation canvas */
   const cv = document.createElement('canvas');
-  cv.width = 96; cv.height = 72;
+  cv.width = 128; cv.height = 96;
   const cx = cv.getContext('2d', { willReadFrequently:true });
   thumb.insertBefore(cv, pixgrid);
   /* static fallback image */
@@ -768,6 +741,10 @@ function setupThumb(game, thumb){
   if(game.img){
     img = document.createElement('img');
     img.src = game.img; img.alt = '';
+    img.addEventListener('error', () => {   /* missing still: show the live game instead */
+      img.remove(); img = null;
+      if(dead) fallback();
+    });
     thumb.insertBefore(img, pixgrid);
   }
   let darkCount = 0, dead = false, captured = false, live = false;
@@ -875,7 +852,7 @@ document.addEventListener('keydown', e => {
       e.preventDefault(); selectCard((selected-1+n) % n); beep(660,.04,.04);
     }
     if(e.key === 'Enter' && !e.target.closest('button')) launch(GAMES[selected]);
-    if(e.key === 'F2'){ e.preventDefault(); newIdentity(); }
+    if(e.key === 'F2'){ e.preventDefault(); openNameScene(); }
   }
 });
 /* any key or tap fast-forwards the whole intro, not one line at a time */
@@ -898,10 +875,9 @@ async function powerOn(){
   off.remove();
   zapSound();
   screen.classList.add('on');
-  $('#skipBtn').hidden = false;
-  await pace(650);
+  await pace(480);
   await bootSequence();
-  worldScene();
+  menuScene();
 }
 off.addEventListener('click', powerOn);
 document.addEventListener('keydown', function once(e){
