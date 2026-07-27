@@ -747,9 +747,9 @@ function setupThumb(game, thumb){
     });
     thumb.insertBefore(img, pixgrid);
   }
-  let darkCount = 0, dead = false, captured = false, live = false;
+  let darkCount = 0, dead = false, captured = false, live = false, asleep = false;
   function sample(){
-    if(dead) return;
+    if(dead || asleep) return;
     /* Cross-origin frames return null here rather than throwing, so this has to
        be tested explicitly — otherwise the fallback below can never fire. */
     let doc = null;
@@ -781,10 +781,25 @@ function setupThumb(game, thumb){
      instead of running a whole game behind a picture of itself. */
   function setLive(on){
     live = on;
+    if(asleep) return;
     if(dead && img){ frame.style.display = 'none'; return; } /* the still says it all */
     frame.style.display = (on || !captured) ? '' : 'none';
   }
-  return { sample, setLive, isLive: () => live, isResolved: () => dead || captured };
+  /* Hiding an iframe frees nothing. While a game is being played the previews are
+     unloaded outright, so the device holds one game instead of four — four was
+     enough to get the tab killed and reloaded on a phone. */
+  function sleep(on){
+    if(on === asleep) return;
+    asleep = on;
+    if(on){
+      frame.style.display = 'none';
+      frame.src = 'about:blank';
+    }else if(!(dead && img)){   /* a cartridge showing a still never needs its game back */
+      frame.src = game.url;
+      setLive(live);
+    }
+  }
+  return { sample, setLive, sleep, isLive: () => live, isResolved: () => dead || captured };
 }
 /* One sampler for all cartridges, only while the menu is on screen: every thumb
    gets polled until it resolves, then only the selected one keeps updating. */
@@ -801,6 +816,7 @@ async function launch(game){
   beep(440,.09,.05); beep(880,.12,.05);
   document.body.classList.add('playing');
   show('play');
+  thumbs.forEach(t => t && t.sleep(true));   /* free the previews before loading a game */
   announce('Loading ' + game.title);
   const load = document.createElement('div');
   load.id = 'loadingCart';
@@ -825,6 +841,7 @@ function eject(){
   scenes.play.innerHTML = '';
   playFrame = null;
   ejectBtn.hidden = true;
+  thumbs.forEach(t => t && t.sleep(false));
   menuScene();
   const card = document.querySelectorAll('.card')[selected];
   if(card) card.focus();
